@@ -1,9 +1,9 @@
 [
   {
-    "id": "1",
+    "id": "lllol6sdwc887q6kc",
     "title": "Producto 1",
     "description": "Descripción del producto 1",
-    "code": "abc123",
+    "code": "4324",
     "price": 100,
     "status": true,
     "stock": 50,
@@ -11,20 +11,9 @@
     "thumbnails": []
   },
   {
-    "id": "2",
-    "title": "Producto 2",
-    "description": "Descripción del producto 2",
-    "code": "def456",
-    "price": 150,
-    "status": true,
-    "stock": 30,
-    "category": "Ropa",
-    "thumbnails": []
-  },
-  {
-    "id": 4242,
-    "title": "Producto 1",
-    "description": "Descripción del producto 1",
+    "id": "lllon966rlex2ru07u",
+    "title": "fsafsafasfas",
+    "description": "Descripción del producsadasfasasfas4 ",
     "code": "4324",
     "price": 100,
     "status": true,

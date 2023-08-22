@@ -3,146 +3,107 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const CARTS_FILE_PATH = path.join(__dirname, '../carritos.json');
+const PRODUCTS_FILE_PATH = path.join(__dirname, '../productos.json');
 
-router.post('/', (req, res) => {
-  const newCart = {
-    id: uuidv4(),
-    products: []
-  };
-
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
-
-  carts.push(newCart);
-  fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
-
-  res.status(201).json(newCart);
+router.get('/', (req, res) => {
+  const productsData = fs.readFileSync(PRODUCTS_FILE_PATH, 'utf8');
+  const products = JSON.parse(productsData);
+  res.json(products);
 });
 
-router.put('/:cid', (req, res) => {
-  const cid = req.params.cid;
+// Ruta GET /api/products/:pid
+router.get('/:pid', (req, res) => {
+  const pid = req.params.pid;
+  const productsData = fs.readFileSync(PRODUCTS_FILE_PATH, 'utf8');
+  const products = JSON.parse(productsData);
+  const product = products.find(p => p.id === pid);
+
+  if (!product) {
+    res.status(404).json({ error: 'Producto no encontrado' });
+    return;
+  }
+
+  res.json(product);
+});
+
+// Ruta POST /api/products/
+router.post('/', (req, res) => {
+  const product = req.body;
+
+  // Validación de campos obligatorios
+  if (!product.title || !product.description || !product.code || !product.price ||
+      !product.status || !product.stock || !product.category) {
+    res.status(400).json({ error: 'Campos obligatorios faltantes' });
+    return;
+  }
+
+  const productsData = fs.readFileSync(PRODUCTS_FILE_PATH, 'utf8');
+  const products = JSON.parse(productsData);
+
+  const existingProduct = products.find(p => p.code === product.code);
+  if (existingProduct) {
+    res.status(400).json({ error: 'Ya existe un producto con el mismo código' });
+    return;
+  }
+
+  const newProduct = {
+    id: generateId(),
+    ...product,
+    thumbnails: product.thumbnails || [],
+  };
+
+  products.push(newProduct);
+  fs.writeFileSync(PRODUCTS_FILE_PATH, JSON.stringify(products, null, 2), 'utf8');
+
+  res.status(201).json(newProduct);
+});
+
+// Ruta PUT /api/products/:pid
+router.put('/:pid', (req, res) => {
+  const pid = req.params.pid;
   const updates = req.body;
 
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
+  const productsData = fs.readFileSync(PRODUCTS_FILE_PATH, 'utf8');
+  const products = JSON.parse(productsData);
 
-  const cartIndex = carts.findIndex(c => c.id === cid);
-  if (cartIndex === -1) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
+  const productIndex = products.findIndex(p => p.id === pid);
+  if (productIndex === -1) {
+    res.status(404).json({ error: 'Producto no encontrado' });
     return;
   }
 
-  carts[cartIndex] = {
-    ...carts[cartIndex],
+  products[productIndex] = {
+    ...products[productIndex],
     ...updates,
-    id: cid,
+    id: pid,
   };
 
-  fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
+  fs.writeFileSync(PRODUCTS_FILE_PATH, JSON.stringify(products, null, 2), 'utf8');
 
-  res.json(carts[cartIndex]);
+  res.json(products[productIndex]);
 });
 
-router.delete('/:cid', (req, res) => {
-  const cid = req.params.cid;
-
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
-
-  const cartIndex = carts.findIndex(c => c.id === cid);
-  if (cartIndex === -1) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
-    return;
-  }
-
-  const deletedCart = carts.splice(cartIndex, 1);
-  fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
-
-  res.json(deletedCart[0]);
-});
-
-router.get('/:cid', (req, res) => {
-  const cid = req.params.cid;
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
-  const cart = carts.find(c => c.id === cid);
-
-  if (!cart) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
-    return;
-  }
-
-  res.json(cart);
-});
-
-router.post('/:cid/product/:pid', (req, res) => {
-  const cid = req.params.cid;
-  const pid = req.params.pid;
-  const quantity = req.body.quantity || 1;
-
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
-
-  const cartIndex = carts.findIndex(c => c.id === cid);
-  if (cartIndex === -1) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
-    return;
-  }
-
-  const cart = carts[cartIndex];
-  const existingProduct = cart.products.find(p => p.product === pid);
-  if (existingProduct) {
-    existingProduct.quantity += quantity;
-  } else {
-    cart.products.push({ product: pid, quantity });
-  }
-
-  fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
-
-  res.json(cart);
-});
-
-router.get('/:cid/products', (req, res) => {
-  const cid = req.params.cid;
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
-  const cart = carts.find(c => c.id === cid);
-
-  if (!cart) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
-    return;
-  }
-
-  res.json(cart.products);
-});
-
-router.delete('/:cid/product/:pid', (req, res) => {
-  const cid = req.params.cid;
+// Ruta DELETE /api/products/:pid
+router.delete('/:pid', (req, res) => {
   const pid = req.params.pid;
 
-  const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
-  const carts = JSON.parse(cartsData);
+  const productsData = fs.readFileSync(PRODUCTS_FILE_PATH, 'utf8');
+  const products = JSON.parse(productsData);
 
-  const cartIndex = carts.findIndex(c => c.id === cid);
-  if (cartIndex === -1) {
-    res.status(404).json({ error: 'Carrito no encontrado' });
-    return;
-  }
-
-  const cart = carts[cartIndex];
-  const productIndex = cart.products.findIndex(p => p.product === pid);
-
+  const productIndex = products.findIndex(p => p.id === pid);
   if (productIndex === -1) {
-    res.status(404).json({ error: 'Producto no encontrado en el carrito' });
+    res.status(404).json({ error: 'Producto no encontrado' });
     return;
   }
 
-  cart.products.splice(productIndex, 1);
-  fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
+  const deletedProduct = products.splice(productIndex, 1);
+  fs.writeFileSync(PRODUCTS_FILE_PATH, JSON.stringify(products, null, 2), 'utf8');
 
-  res.json(cart);
+  res.json(deletedProduct[0]);
 });
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
 
 module.exports = router;

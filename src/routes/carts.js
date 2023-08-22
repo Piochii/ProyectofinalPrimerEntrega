@@ -2,26 +2,30 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid')
+
 const CARTS_FILE_PATH = path.join(__dirname, '../carritos.json');
 
 
-router.post('/', (req, res) => {
-  const newCart = {
-    id: uuidv4(), 
-    products: []
-  };
+ // Ruta POST /api/carts/
+ router.post('/', (req, res) => {
+  const cart = req.body;
+
+  // Validación de campos obligatorios
+  if (!cart.id || !cart.products) {
+    res.status(400).json({ error: 'Campos id y products son obligatorios' });
+    return;
+  }
 
   const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
   const carts = JSON.parse(cartsData);
 
-  carts.push(newCart);
+  carts.push(cart);
   fs.writeFileSync(CARTS_FILE_PATH, JSON.stringify(carts, null, 2), 'utf8');
 
-  res.status(201).json(newCart);
+  res.status(201).json(cart);
 });
 
-
+// Ruta PUT /api/carts/:cid
 router.put('/:cid', (req, res) => {
   const cid = req.params.cid;
   const updates = req.body;
@@ -46,7 +50,7 @@ router.put('/:cid', (req, res) => {
   res.json(carts[cartIndex]);
 });
 
-
+// Ruta DELETE /api/carts/:cid
 router.delete('/:cid', (req, res) => {
   const cid = req.params.cid;
 
@@ -65,7 +69,7 @@ router.delete('/:cid', (req, res) => {
   res.json(deletedCart[0]);
 });
 
-
+// Ruta GET /api/carts/:cid
 router.get('/:cid', (req, res) => {
   const cid = req.params.cid;
   const cartsData = fs.readFileSync(CARTS_FILE_PATH, 'utf8');
@@ -80,7 +84,7 @@ router.get('/:cid', (req, res) => {
   res.json(cart);
 });
 
-
+// Ruta POST /api/carts/:cid/product/:pid
 router.post('/:cid/product/:pid', (req, res) => {
   const cid = req.params.cid;
   const pid = req.params.pid;
@@ -97,11 +101,9 @@ router.post('/:cid/product/:pid', (req, res) => {
 
   const cart = carts[cartIndex];
   const existingProduct = cart.products.find(p => p.product === pid);
-  
   if (existingProduct) {
     existingProduct.quantity += quantity;
-  } 
-  else {
+  } else {
     cart.products.push({ product: pid, quantity });
   }
 
@@ -111,8 +113,5 @@ router.post('/:cid/product/:pid', (req, res) => {
 });
 
 
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
 
 module.exports = router;
